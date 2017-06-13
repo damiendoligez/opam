@@ -29,6 +29,7 @@ type command = {
   cmd_verbose: bool option;
   cmd_name: string option;
   cmd_metadata: (string * string) list option;
+  cmd_merge_outputs: bool option;
 }
 
 let string_of_command c = String.concat " " (c.cmd::c.args)
@@ -50,10 +51,11 @@ let make_command_text ?(color=`green) str ?(args=[]) cmd =
   in
   Printf.sprintf "[%s: %s]" (OpamGlobals.colorise color str) summary
 
-let command ?env ?verbose ?name ?metadata ?dir ?allow_stdin ?text cmd args =
+let command ?env ?verbose ?name ?metadata ?dir ?allow_stdin ?text ?merge_outputs cmd args =
   { cmd; args;
     cmd_env=env; cmd_verbose=verbose; cmd_name=name; cmd_metadata=metadata;
-    cmd_dir=dir; cmd_stdin=allow_stdin; cmd_text=text; }
+    cmd_dir=dir; cmd_stdin=allow_stdin; cmd_text=text;
+    cmd_merge_outputs=merge_outputs; }
 
 
 (** Running processes *)
@@ -122,12 +124,14 @@ let string_of_info ?(color=`yellow) info =
 
 (** [create cmd args] create a new process to execute the command
     [cmd] with arguments [args]. If [stdout_file] or [stderr_file] are
-    set, the channels are redirected to the corresponding files.  The
+    set, the channels are redirected to the corresponding files.
+    If [merge_outputs] is true, merge the stdout and stderr into the
+    stdout file or channel. The
     outputs are discarded is [verbose] is set to false. The current
     environment can also be overriden if [env] is set. The environment
     which is used to run the process is recorded into [env_file] (if
     set). *)
-let create ?info_file ?env_file ?(allow_stdin=true) ?stdout_file ?stderr_file ?env ?(metadata=[]) ?dir
+let create ?info_file ?env_file ?(allow_stdin=true) ?stdout_file ?stderr_file ?env ?(metadata=[]) ?dir ?(merge_outputs=false)
     ~verbose cmd args =
   let nothing () = () in
   let tee f =
@@ -153,6 +157,10 @@ let create ?info_file ?env_file ?(allow_stdin=true) ?stdout_file ?stderr_file ?e
     | None   -> Unix.environment ()
     | Some e -> e in
   let time = Unix.gettimeofday () in
+
+  let stderr_fd, stderr_file =
+    if merge_outputs then stdout_fd, stdout_file else stderr_fd, stderr_file
+  in
 
   let () =
     (* write the env file before running the command*)
@@ -236,11 +244,13 @@ let interrupt p = match OpamGlobals.os () with
 let run_background command =
   let { cmd; args;
         cmd_env=env; cmd_verbose=_; cmd_name=name;
-        cmd_metadata=metadata; cmd_dir=dir; cmd_stdin=allow_stdin } =
+        cmd_metadata=metadata; cmd_dir=dir; cmd_stdin=allow_stdin;
+        cmd_merge_outputs=merge_outputs } =
     command
   in
   let verbose = is_verbose_command command in
   let allow_stdin = OpamMisc.Option.default false allow_stdin in
+  let merge_outputs = OpamMisc.Option.default false merge_outputs in
   let env = match env with Some e -> e | None -> Unix.environment () in
   let file ext = match name with
     | None -> None
@@ -259,7 +269,7 @@ let run_background command =
   let env_file    = file "env" in
   let info_file   = file "info" in
   create ~env ?info_file ?env_file ?stdout_file ?stderr_file ~verbose ?metadata
-    ~allow_stdin ?dir cmd args
+    ~allow_stdin ?dir ~merge_outputs cmd args
 
 let dry_run_background c = {
   p_name   = c.cmd;

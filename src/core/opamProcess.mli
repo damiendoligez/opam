@@ -28,6 +28,7 @@ val command:
   ?allow_stdin:bool ->              (** whether to forward stdin *)
   ?text:string ->                   (** Short text that may be displayed in
                                         status *)
+  ?merge_outputs:bool ->            (** whether to merge stderr into stdout *)
   string ->                         (** The command itself *)
   string list ->                    (** Command-line arguments *)
   command
