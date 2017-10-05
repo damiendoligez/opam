@@ -162,16 +162,15 @@ type build_options = {
   external_tags : string list;
   jobs          : int option;
   json          : string option;
-  merge_outputs : bool;
 }
 
 let create_build_options
     keep_build_dir make no_checksums req_checksums build_test
     build_doc show dryrun external_tags fake
-    jobs json merge_outputs = {
+    jobs json = {
   keep_build_dir; make; no_checksums; req_checksums;
   build_test; build_doc; show; dryrun; external_tags;
-  fake; jobs; json; merge_outputs
+  fake; jobs; json
 }
 
 let json_update = function
@@ -689,13 +688,10 @@ let build_options =
        actually performing them. \
        WARNING: This option is dangerous and likely to break your OPAM \
        environment. You probably want `--dry-run'. You've been warned." in
-  let merge_outputs =
-    mk_flag ["merge-outputs"]
-      "Merge the stderr and stdout of the compilation process." in
   Term.(pure create_build_options
     $keep_build_dir $make $no_checksums $req_checksums $build_test
     $build_doc $show $dryrun $external_tags $fake
-    $jobs_flag $json_flag $merge_outputs)
+    $jobs_flag $json_flag)
 
 let init_dot_profile shell dot_profile =
   match dot_profile with

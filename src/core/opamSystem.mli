@@ -151,7 +151,7 @@ val directories_with_links: string -> string list
 val make_command:
   ?verbose:bool -> ?env:string array -> ?name:string -> ?text:string ->
   ?metadata:(string * string) list -> ?allow_stdin:bool -> ?dir:string ->
-  ?check_existence:bool ->
+  ?check_existence:bool -> ?short:bool ->
   string -> string list -> OpamProcess.command
 
 (** OLD COMMAND API, DEPRECATED *)
@@ -221,7 +221,7 @@ val download: overwrite:bool -> ?compress:bool -> ?checksum:string ->
 val patch: string -> unit
 
 (** Create a tempory file in {i ~/.opam/logs/<name>XXX} *)
-val temp_file: ?dir:string -> string -> string
+val temp_file: ?dir:string -> ?short:bool -> string -> string
 
 (** Print stats *)
 val print_stats: unit -> unit

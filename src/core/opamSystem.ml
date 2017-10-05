@@ -54,8 +54,11 @@ let path_sep = match OpamGlobals.os () with
   | OpamGlobals.Win32 -> ';'
   | OpamGlobals.Cygwin | _ -> ':'
 
-let temp_basename prefix =
-  Printf.sprintf "%s-%d-%06x" prefix (Unix.getpid ()) (Random.int 0xFFFFFF)
+let temp_basename ?(short=false) prefix =
+  if short then
+    Printf.sprintf "%s-%d" prefix (Unix.getpid ())
+  else
+    Printf.sprintf "%s-%d-%06x" prefix (Unix.getpid ()) (Random.int 0xFFFFFF)
 
 let rec mk_temp_dir () =
   let s = Filename.get_temp_dir_name () / temp_basename "opam" in
@@ -91,7 +94,7 @@ let remove_dir dir =
 let temp_files = Hashtbl.create 1024
 let check_remove_temp_dir = ref true
 
-let rec temp_file ?dir prefix =
+let rec temp_file ?dir ?short prefix =
   let temp_dir = match dir with
     | None   ->
       let dir = !OpamGlobals.root_dir in
@@ -101,8 +104,8 @@ let rec temp_file ?dir prefix =
       dir / "log"
     | Some d -> d in
   mkdir temp_dir;
-  let file = temp_dir / temp_basename prefix in
-  if Hashtbl.mem temp_files file then
+  let file = temp_dir / temp_basename ?short prefix in
+  if short <> Some true && Hashtbl.mem temp_files file then
     temp_file ?dir prefix
   else (
     Hashtbl.add temp_files file true;
@@ -358,18 +361,19 @@ let print_stats () =
     OpamGlobals.msg "%d external processes called:\n%s%!"
       (List.length l) (OpamMisc.itemize ~bullet:"  " (String.concat " ") l)
 
-let log_file ?dir name = match name with
-  | None   -> temp_file "log"
+let log_file ?dir ?short name =
+ match name with
+  | None   -> temp_file ?short "log"
   | Some n ->
     let dir =
       OpamMisc.Option.default (Filename.concat !OpamGlobals.root_dir "log") dir
     in
-    temp_file ~dir n
+    temp_file ~dir ?short n
 
 let make_command
-    ?verbose ?(env=default_env) ?name ?text ?metadata ?allow_stdin ?dir ?(check_existence=true)
+    ?verbose ?(env=default_env) ?name ?text ?metadata ?allow_stdin ?dir ?(check_existence=true) ?short
     cmd args =
-  let name = log_file ?dir name in
+  let name = log_file ?dir ?short name in
   let verbose =
     OpamMisc.Option.default (!OpamGlobals.verbose_level >= 2) verbose
   in
